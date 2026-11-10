@@ -1,59 +1,89 @@
+import csv
 from validator import validate_contact
-from loader import load_contacts, save_clean_contacts
-from analytics import analyze_contacts
+from analytics import analytics_report
 
-def view_contacts(contacts):
 
-    print("\n--- STUDENTS CONTACTS ---")
+def load_students():
+    students = []
 
-    if not contacts:
-        print("no contacts found.")
-        return
-    for conatct in contacts:
-        print(contact["name"], contact["phone"], contact["email"])
+    try:
+        with open("students_clean.csv", "r") as file:
+            reader = csv.DictReader(file)
 
-def search_cintact(contacts):
+            for row in reader:
+                students.append(row)
 
-    search = input("Enter namr or phone to search:").lower()
+    except FileNotFoundError:
+        print("Student file not found!")
 
-    found = false
+    return students
 
-    for contact in contacts:
-        if (search in contact["name"].lower() or search in contact["phone"]):
-            print(contact)
-            found = true
-        if not found:
-            print("contact not found.")
 
-def register_student(contacts):
-    name = input("Enter name:")
-    phone = input("Enter phone:")
-    email = input("Enter email:")
+def save_students(students):
+    with open("students_clean.csv", "w", newline="") as file:
+        fields = ["id", "name", "phone", "email"]
 
-    valid, reason =  validate_contact(name, phone, email)
+        writer = csv.DictWriter(file, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(students)
+
+
+def view_students(students):
+    print("\nID\tName\tPhone\tEmail")
+
+    for s in students:
+        print(s["id"], s["name"], s["phone"], s["email"], sep="\t")
+
+
+def search_student(students):
+    search = input("Enter name, phone or email: ").lower()
+
+    for s in students:
+        if search in s["name"].lower() or search == s["phone"] or search == s["email"].lower():
+            print(s)
+            return
+
+    print("Student not found!")
+
+
+def register_student(students):
+    name = input("Enter name: ")
+    phone = input("Enter phone: ")
+    email = input("Enter email: ")
+
+    valid, reason = validate_contact(name, phone, email)
 
     if not valid:
         print(reason)
         return
 
-    for contact in contacts:
-        if contact["phone"] == phone or contact["email"] == email:
-            print("Duplicate contact.")
+    for s in students:
+        if s["phone"] == phone or s["email"].lower() == email.lower():
+            print("Duplicate student!")
             return
 
-    contacts.append({"name" : name, "phone" : phone, "email" : email})
+    student = {
+        "id": str(len(students) + 1),
+        "name": name,
+        "phone": phone,
+        "email": email
+    }
 
-    save_clean_contacts(contacts)
-    print("Student registered successfully.")
+    students.append(student)
+    save_students(students)
 
-def update_student(contacts):
-    phone = input("enter phone number to update:")
+    print("Student registered successfully!")
 
-    for contact in contacts:
-        if contact["phone"] == phone:
-            name = input("enter new name:")
-            new_phone = input("enter new phone:")
-            email = input("enter new email:")
+
+def update_student(students):
+    phone = input("Enter current phone number: ")
+
+    for s in students:
+        if s["phone"] == phone:
+
+            name = input("Enter new name: ")
+            new_phone = input("Enter new phone: ")
+            email = input("Enter new email: ")
 
             valid, reason = validate_contact(name, new_phone, email)
 
@@ -61,61 +91,80 @@ def update_student(contacts):
                 print(reason)
                 return
 
-            contact["name"]=name
-            contact["phone"]=new_phone
-            contact["email"]=email
+            for other in students:
+                if other != s and (
+                    other["phone"] == new_phone or
+                    other["email"].lower() == email.lower()
+                ):
+                    print("Duplicate details!")
+                    return
 
-            save_clean_contacts(contacts)
-            print("contacts updated successfully.")
+            s["name"] = name
+            s["phone"] = new_phone
+            s["email"] = email
+
+            save_students(students)
+            print("Student updated successfully!")
             return
-        print("contact not found.")
 
-def delete_student(contacts):
-    phone = input("Enter phone number to delete:")
-    for contact in contacts:
-        if contact["phone"]== phone:
+    print("Student not found!")
 
-            contacts.remove(contact)
-            save_clean_contacts(contacts)
 
-            print("contacts deleted successfully.")
+def delete_student(students):
+    value = input("Enter student ID or phone: ")
+
+    for s in students:
+        if s["id"] == value or s["phone"] == value:
+            students.remove(s)
+            save_students(students)
+            print("Student deleted successfully!")
             return
-        print("contacts not found.")
+
+    print("Student not found!")
+
 
 def main():
-    contacts = load_contacts()
-    while True:
-        print("\n==== STUDENT REGISTRATION STYSTEM ====")
-        print("1. view Contacts")
-        print("2. Search contact")
-        print("3. Register student")
-        print("4. Update student")
-        print("5. Delete student")
-        print("6. analytics")
-        print("7. exit")
 
-        choice = input("Enter your choice:")
+    while True:
+        students = load_students()
+
+        print("\n===== STUDENT REGISTRATION SYSTEM =====")
+        print("1. View All Students")
+        print("2. Search Student")
+        print("3. Register Student")
+        print("4. Update Student")
+        print("5. Delete Student")
+        print("6. Analytics Report")
+        print("7. Exit")
+
+        choice = input("Enter your choice: ")
 
         if choice == "1":
-            view_contacts(contacts)
-        elif choice == "2":
-            search_contact(contacts)
-        elif choice == "3":
-            register_student(contacts)
-        elif choice == "4":
-            update_student(contacts)
-        elif choice == "5":
-            delete_student(contacts)
-        elif choice == "6":
-            analyze_contacts(contacts)
-        elif choice == "7":
-            print("Thank you for using the system!")
+            view_students(students)
 
+        elif choice == "2":
+            search_student(students)
+
+        elif choice == "3":
+            register_student(students)
+
+        elif choice == "4":
+            update_student(students)
+
+        elif choice == "5":
+            delete_student(students)
+
+        elif choice == "6":
+            analytics_report()
+
+        elif choice == "7":
+            save_students(students)
+            print("Thank you for using the system!")
             break
+
         else:
-            print("invalid choice. Try again.")
+            print("Invalid choice!")
+
 
 if __name__ == "__main__":
     main()
-            
-        
